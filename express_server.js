@@ -38,6 +38,11 @@ app.post('/urls',(req,res) => {
   res.redirect(302,`/urls/${uID}`);
 });
 
+app.post('/urls/:shortURL/delete',(req,res) => {
+  delete urlDatabase[req.params.shortURL];
+  res.redirect(302,'/urls')
+});
+
 app.get('/urls.json',(req,res) => {
   res.json(urlDatabase);
 });
