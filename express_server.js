@@ -2,15 +2,34 @@ const express = require('express');
 const app = express();
 const PORT = 8080;
 
+const bodyParser = require('body-parser');
+app.use(bodyParser.urlencoded({extended: true}));
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
+};
+
+function generateRandomString() {
+  let string = Math.random().toString(36).slice(2);
+  let strArr = string.split("").splice(5).join("");
+  return strArr;
 };
 
 app.set('view engine', 'ejs');
 
 app.get('/',(req,res)=> {
   res.send('Hello!');
+});
+
+app.get("/urls/new", (req, res) => {
+  res.render("urls_new");
+});
+
+app.post('/urls',(req,res) => {
+  console.log(req.body.longURL);
+  // urlDatabase.push(req.body.longURL);
+  res.send('OK!');
 });
 
 app.get('/urls.json',(req,res) => {
