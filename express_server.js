@@ -11,9 +11,13 @@ const urlDatabase = {
 };
 
 function generateRandomString() {
-  let string = Math.random().toString(36).slice(2);
-  let strArr = string.split("").splice(5).join("");
-  return strArr;
+  for (let i = 0; i < 100; i++) {
+    let string = Math.random().toString(36).slice(2);
+    let strArr = string.split("").splice(5).join("");
+    if (strArr.length === 6) {
+      return strArr;
+    }
+  }
 };
 
 app.set('view engine', 'ejs');
@@ -27,9 +31,11 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.post('/urls',(req,res) => {
-  console.log(req.body.longURL);
-  // urlDatabase.push(req.body.longURL);
-  res.send('OK!');
+  let uID = generateRandomString();
+  urlDatabase[uID] = req.body.longURL;
+  console.log(urlDatabase);
+  // let templateVars = { shortURL: uID };
+  res.redirect(302,`/urls/${uID}`);
 });
 
 app.get('/urls.json',(req,res) => {
@@ -43,6 +49,11 @@ app.get('/urls',(req,res) => {
 app.get('/urls/:shortURL',(req,res) => {
   let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
   res.render('urls_show', templateVars);
+});
+
+app.get('/u/:shortURL',(req,res) => {
+  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+  res.redirect(302,urlDatabase[req.params.shortURL]);
 });
 
 app.get('/hello',(req,res) => {
