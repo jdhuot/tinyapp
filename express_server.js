@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const PORT = 8080;
+const PORT = 3000;
 const cookieParser = require('cookie-parser')
 
 const bodyParser = require('body-parser');
@@ -11,6 +11,19 @@ const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
+const users = { 
+  "userRandomID": {
+    id: "userRandomID", 
+    email: "user@example.com", 
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID", 
+    email: "user2@example.com", 
+    password: "dishwasher-funk"
+  }
+}
 
 function generateRandomString() {
   for (let i = 0; i < 100; i++) {
@@ -38,13 +51,15 @@ app.get('/register', (req, res) => {
   res.render('register', templateVars);
 });
 
-// app.post('/register',(req,res) => {
-//   const email = req.body.email;
-//   const pass = req.body.password;
-//   res.cookie('username',email);
-//   res.cookie('password',pass);
-//   res.redirect('/urls');
-// });
+app.post('/register',(req,res) => {
+  let userID = generateRandomString();
+  const email = req.body.email;
+  const pass = req.body.password;
+  users[userID] = { id: userID, email: email, password: pass };
+  res.cookie('user_id', userID);
+  console.log(users);
+  res.redirect('/urls');
+});
 
 app.post('/urls',(req,res) => {
   let uID = generateRandomString();
