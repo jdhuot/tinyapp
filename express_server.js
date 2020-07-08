@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const PORT = 8080;
+const PORT = 3000;
 const cookieParser = require('cookie-parser')
 
 const bodyParser = require('body-parser');
@@ -40,9 +40,8 @@ function emailLookup(email) {
   for (const user in users) {
     result.push(users[user].email);
   }
-  console.log(result);
   if (result.includes(email)) {
-    return true;
+    return result;
   } else {
     return false;
   }
@@ -68,10 +67,11 @@ app.post('/register',(req,res) => {
   let userID = generateRandomString();
   const email = req.body.email;
   const pass = req.body.password;
+  const templateVars = { Error: 'Invalid Username or Password' };
   if (emailLookup(email)) {
-    res.status(400).send('Oops');
+    res.status(400).send('Username already exists! <a href="/login">Login Instead</a>');
   } else if (!email || !pass) {
-  res.status(400).send("Error: Empty Username or Password");
+    res.status(400).send('Invalid Username or Password <a href="/register">Try Again</a>');
   } else {
     users[userID] = { id: userID, email: email, password: pass };
     res.cookie('user_id', userID);
@@ -93,15 +93,21 @@ app.post('/urls/:shortURL/delete',(req,res) => {
 
 app.post('/login', (req,res) => {
   const userEmail = req.body.user_email;
+  const userPass = req.body.user_pass;
   for (const user in users) {
-    if (users[user].email === userEmail) {
+    if (users[user].email === userEmail && users[user].password === userPass) {
       res.cookie('user_id', users[user].id);
       res.redirect('/urls');
     } else {
-      res.redirect('/urls');
+      res.redirect('/login');
     }
   }
   
+});
+
+app.get('/login',(req,res) => {
+  const templateVars = { user: users[req.cookies.user_id] }
+  res.render('login',templateVars);
 });
 
 app.post('/logout',(req,res) => {
@@ -141,5 +147,5 @@ app.get('/u/:shortURL',(req,res) => {
 
 
 app.listen(PORT,() => {
-  console.log(`Tinyapp listening on localhost:${PORT}`);
+  console.log(`Tinyapp listening on http://localhost:${PORT}`);
 });

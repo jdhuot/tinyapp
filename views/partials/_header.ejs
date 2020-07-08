@@ -11,9 +11,8 @@
       </div>
       <% if (!user) { %>
       <div>
-        <form method="post" action="/login">
-          <input type="text" name="user_email"></input>
-          <button type="submit" class="btn btn-primary">Sign In</button>
+        <a href="/login" class="btn btn-dark btn-sm">Login</a>
+        <a href="/register" class="btn btn-dark btn-sm">Register</a>
         </form>
       </div>
       <% } else { %>
