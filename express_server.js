@@ -24,7 +24,7 @@ function generateRandomString() {
 
 app.set('view engine', 'ejs');
 
-app.get('/',(req,res)=> {
+app.get('/',(req,res) => {
   res.redirect('/urls');
 });
 
@@ -33,6 +33,18 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", templateVars);
 });
 
+app.get('/register', (req, res) => {
+  const templateVars = { username: req.cookies.username }
+  res.render('register', templateVars);
+});
+
+// app.post('/register',(req,res) => {
+//   const email = req.body.email;
+//   const pass = req.body.password;
+//   res.cookie('username',email);
+//   res.cookie('password',pass);
+//   res.redirect('/urls');
+// });
 
 app.post('/urls',(req,res) => {
   let uID = generateRandomString();
