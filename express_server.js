@@ -95,14 +95,17 @@ app.post('/login', (req,res) => {
   const userEmail = req.body.user_email;
   const userPass = req.body.user_pass;
   for (const user in users) {
-    if (users[user].email === userEmail && users[user].password === userPass) {
+    if (!emailLookup(userEmail)) {
+      res.status(403).send("Hmm.. That username can't be found, <a href='/login'>Try again</a>");
+    } else if (users[user].email === userEmail && users[user].password !== userPass) {
+      res.status(403).send("Hmm.. That password doesn't match our records, <a href='/login'>Try again</a>");
+    } else if (users[user].email === userEmail && users[user].password === userPass) {
       res.cookie('user_id', users[user].id);
       res.redirect('/urls');
     } else {
       res.redirect('/login');
     }
   }
-  
 });
 
 app.get('/login',(req,res) => {
