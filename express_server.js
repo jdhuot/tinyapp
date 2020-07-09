@@ -1,12 +1,20 @@
 const express = require('express');
 const app = express();
 const PORT = 3000;
-const cookieParser = require('cookie-parser')
+const cookieParser = require('cookie-parser');
 const bcrypt = require('bcrypt');
+const cookieSession = require('cookie-session');
+const { getUserByEmail } = require('./helpers.js');
 
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['fefaoijfovrSFpofj0390949j0fijiadJ'],
+
+  // Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}))
 
 const urlDatabase = {
   'b2xVn2': { longURL: "http://www.lighthouselabs.ca", userID: "userRandomID" }, 
@@ -30,6 +38,7 @@ const users = {
      password: bcrypt.hashSync('456', 10)
    }
 };
+console.log(getUserByEmail('user@example.com', users));
 
 function generateRandomString() {
   for (let i = 0; i < 100; i++) {
@@ -41,17 +50,17 @@ function generateRandomString() {
   }
 };
 
-function emailLookup(email) {
-  let result = [];
-  for (const user in users) {
-    result.push(users[user].email);
-  }
-  if (result.includes(email)) {
-    return result;
-  } else {
-    return false;
-  }
-};
+// function emailLookup(email, database) {
+//   let result = [];
+//   for (const user in database) {
+//     result.push(database[user].email);
+//   }
+//   if (result.includes(email)) {
+//     return result;
+//   } else {
+//     return false;
+//   }
+// };
 
 function urlsForUser(id) {
   let result = {};
@@ -70,20 +79,24 @@ function urlsForUser(id) {
 app.set('view engine', 'ejs');
 
 app.get('/',(req,res) => {
-  res.redirect('/urls');
+  if (req.session.user_id) {
+    res.redirect('/urls');
+  } else {
+    res.redirect('/login');
+  }
 });
 
 app.get("/urls/new", (req, res) => {
-  const templateVars = { user: users[req.cookies.user_id] }
-  if (req.cookies.user_id in users) {
+  const templateVars = { user: users[req.session.user_id] }
+  if (req.session.user_id in users) {
     res.render("urls_new", templateVars);
   } else {
-    res.status(400).send("Sorry bub, only logged in users can shorten urls.. feel free to login if you're one! <a href='/login'>Login here</a>");
+    res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>Sorry bub, only logged in users can shorten urls.. feel free to login if you are one!</h2><a href='/login' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Login here</a></div>");
   }
 });
 
 app.get('/register', (req, res) => {
-  const templateVars = { user: users[req.cookies.user_id] }
+  const templateVars = { user: users[req.session.user_id] }
   res.render('register', templateVars);
 });
 
@@ -92,31 +105,30 @@ app.post('/register',(req,res) => {
   const email = req.body.email;
   const pass = req.body.password;
   const hashedPassword = bcrypt.hashSync(pass, 10);
-  if (emailLookup(email)) {
-    res.status(400).send('Username already exists! <a href="/login">Login Instead</a>');
+  if (getUserByEmail(email, users)) {
+    res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>Username already exists!</h2><a href='/login' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Login Instead</a></div>");
   } else if (!email || !pass) {
-    res.status(400).send('Invalid Username or Password <a href="/register">Try Again</a>');
+    res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>Invalid username or password</h2><a href='/register' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Try Again</a></div>");
   } else {
     users[userID] = { id: userID, email: email, password: hashedPassword };
-    res.cookie('user_id', userID);
+    req.session.user_id = userID;
     res.redirect('/urls');
   }
 });
 
 app.post('/urls',(req,res) => {
   let uID = generateRandomString();
-  urlDatabase[uID] = req.body.longURL;
-  // let templateVars = { shortURL: uID };
-  res.redirect(302,`/urls/${uID}`);
+  urlDatabase[uID] = { longURL: req.body.longURL, userID: req.session.user_id }
+  res.redirect(`/urls/${uID}`);
 });
 
 app.post('/urls/:shortURL/delete',(req,res) => {
-  const usrID = req.cookies['user_id']
+  const usrID = req.session['user_id']
   if (usrID === urlDatabase[req.params.shortURL].userID) {
     delete urlDatabase[req.params.shortURL];
     res.redirect(302,'/urls');
   } else {
-    res.status(400).send("You don't have persmission.. return to your own <a href='/urls'>URLS</a>");
+    res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>You don't have permission.... Return to your own urls</h2><a href='/urls' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Click Here</a></div>");
   }
 });
 
@@ -124,25 +136,25 @@ app.post('/login', (req,res) => {
   const userEmail = req.body.user_email;
   const userPass = req.body.user_pass;
   for (const user in users) {
-    if (!emailLookup(userEmail)) {
-      res.status(403).send("Hmm.. That username can't be found, <a href='/login'>Try again</a>");
+    if (!getUserByEmail(userEmail, users)) {
+      res.status(403).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>Hmm.. that username didn't work..</h2><a href='/login' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Try Again</a></div>");
     } else if (users[user].email === userEmail && !bcrypt.compareSync(userPass, users[user].password)) {
-      res.status(403).send("Hmm.. That password doesn't match our records, <a href='/login'>Try again</a>");
+      res.status(403).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>Hmm.. that password didn't work..</h2><a href='/login' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Try Again</a></div>");
     } else if (users[user].email === userEmail && bcrypt.compareSync(userPass, users[user].password)) {
-      res.cookie('user_id', users[user].id);
+      req.session.user_id = users[user].id;
       res.redirect('/urls');
-    } 
+    }
   }
 });
 
 app.get('/login',(req,res) => {
-  const templateVars = { user: users[req.cookies.user_id] }
+  const templateVars = { user: users[req.session.user_id] }
   res.render('login',templateVars);
 });
 
 app.post('/logout',(req,res) => {
   // console.log('hmm');
-  res.clearCookie('user_id');
+  req.session = null;
   res.redirect('/urls');
 });
 
@@ -151,11 +163,11 @@ app.get('/urls.json',(req,res) => {
 });
 
 app.get('/urls',(req,res) => {
-  const links = urlsForUser(req.cookies.user_id);
-  if (req.cookies.user_id) {
-    res.render('urls_index',{ urlDatabase, user: users[req.cookies.user_id], links });
+  const links = urlsForUser(req.session.user_id);
+  if (req.session.user_id) {
+    res.render('urls_index',{ urlDatabase, user: users[req.session.user_id], links });
   } else {
-    res.render('urls_index_blank',{ urlDatabase, user: users[req.cookies.user_id] });
+    res.render('urls_index_blank',{ urlDatabase, user: users[req.session.user_id] });
   }
   
 });
@@ -164,10 +176,10 @@ app.get('/urls/:shortURL',(req,res) => {
   let templateVars = { 
     shortURL: req.params.shortURL, 
     longURL: urlDatabase[req.params.shortURL].longURL,
-    user: users[req.cookies.user_id]
+    user: users[req.session.user_id]
   };
-  const links = urlsForUser(req.cookies.user_id);
-  if (links) {
+  // const links = urlsForUser(req.session.user_id);
+  if (req.session.user_id) {
     res.render('urls_show', templateVars);
   } else {
     res.render('urls_index_blank',templateVars);
@@ -176,12 +188,12 @@ app.get('/urls/:shortURL',(req,res) => {
 });
 
 app.post('/urls/:shortURL/update',(req,res) => {
-  const usrID = req.cookies['user_id']
+  const usrID = req.session.user_id
   if (usrID === urlDatabase[req.params.shortURL].userID) {
     urlDatabase[req.params.shortURL].longURL = req.body.longURL;
     res.redirect('back');
   } else {
-    res.status(400).send("You don't have persmission.. return to your own <a href='/urls'>URLS</a>");
+    res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>You don't have permission.... Return to your own urls</h2><a href='/urls' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Click Here</a></div>");
   }
 
 });
