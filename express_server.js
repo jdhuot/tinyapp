@@ -1,10 +1,9 @@
 const express = require('express');
 const app = express();
 const PORT = 3000;
-const cookieParser = require('cookie-parser');
 const bcrypt = require('bcrypt');
 const cookieSession = require('cookie-session');
-const { getUserByEmail } = require('./helpers.js');
+const { getUserByEmail, newD, generateRandomString } = require('./helpers.js');
 
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({extended: true}));
@@ -14,44 +13,34 @@ app.use(cookieSession({
 
   // Cookie Options
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
-}))
+}));
 
 const urlDatabase = {
-  'b2xVn2': { longURL: "http://www.lighthouselabs.ca", userID: "userRandomID" }, 
-  '9sm5xK': { longURL: "http://www.google.com", userID: "userRandomID" } 
+  'b2xVn2': { longURL: "http://www.lighthouselabs.ca", userID: "userRandomID", date: 'Thu Jul 05' },
+  '9sm5xK': { longURL: "http://www.google.com", userID: "userRandomID", date: 'Thu Jul 07' }
 };
 
-const users = { 
+const users = {
   "userRandomID": {
-    id: "userRandomID", 
-    email: "user@example.com", 
+    id: "userRandomID",
+    email: "user@example.com",
     password: bcrypt.hashSync('123', 10)
   },
- "user2RandomID": {
-    id: "user2RandomID", 
-    email: "user2@example.com", 
+  "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
     password: bcrypt.hashSync('456', 10)
   },
   "user3RandomID": {
-     id: "user3RandomID", 
-     email: "user3@mail.com", 
-     password: bcrypt.hashSync('456', 10)
-   }
+    id: "user3RandomID",
+    email: "user3@mail.com",
+    password: bcrypt.hashSync('456', 10)
+  }
 };
 console.log(getUserByEmail('user@example.com', users));
 
-function generateRandomString() {
-  for (let i = 0; i < 100; i++) {
-    let string = Math.random().toString(36).slice(2);
-    let strArr = string.split("").splice(5).join("");
-    if (strArr.length === 6) {
-      return strArr;
-    }
-  }
-};
 
-
-function urlsForUser(id) {
+const urlsForUser = function(id) {
   let result = {};
   for (const links in urlDatabase) {
     if (urlDatabase[links].userID === id) {
@@ -76,7 +65,7 @@ app.get('/',(req,res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  const templateVars = { user: users[req.session.user_id] }
+  const templateVars = { user: users[req.session.user_id] };
   if (req.session.user_id in users) {
     res.render("urls_new", templateVars);
   } else {
@@ -88,8 +77,8 @@ app.get('/register', (req, res) => {
   if (req.session.user_id) {
     res.redirect('/urls');
   } else {
-  const templateVars = { user: users[req.session.user_id] }
-  res.render('register', templateVars);
+    const templateVars = { user: users[req.session.user_id] };
+    res.render('register', templateVars);
   }
 });
 
@@ -111,14 +100,14 @@ app.post('/register',(req,res) => {
 
 app.post('/urls',(req,res) => {
   let uID = generateRandomString();
-  urlDatabase[uID] = { longURL: req.body.longURL, userID: req.session.user_id }
+  urlDatabase[uID] = { longURL: req.body.longURL, userID: req.session.user_id, date: newD() };
   res.redirect(`/urls/${uID}`);
 });
 
-app.post('/urls/:shortURL/delete',(req,res) => {
-  const usrID = req.session['user_id']
-  if (usrID === urlDatabase[req.params.shortURL].userID) {
-    delete urlDatabase[req.params.shortURL];
+app.post('/urls/:id/delete',(req,res) => {
+  const usrID = req.session['user_id'];
+  if (usrID === urlDatabase[req.params.id].userID) {
+    delete urlDatabase[req.params.id];
     res.redirect('/urls');
   } else {
     res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>You don't have permission.... Return to your own urls</h2><a href='/urls' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Click Here</a></div>");
@@ -144,13 +133,12 @@ app.get('/login',(req,res) => {
   if (req.session.user_id) {
     res.redirect('/urls');
   } else {
-    const templateVars = { user: users[req.session.user_id] }
+    const templateVars = { user: users[req.session.user_id] };
     res.render('login',templateVars);
   }
 });
 
 app.post('/logout',(req,res) => {
-  // console.log('hmm');
   req.session = null;
   res.redirect('/urls');
 });
@@ -166,7 +154,7 @@ app.get('/urls',(req,res) => {
   } else {
     res.render('urls_index_blank',{ urlDatabase, user: users[req.session.user_id] });
   }
-  
+
 });
 
 app.get('/urls/:id',(req,res) => {
@@ -174,23 +162,22 @@ app.get('/urls/:id',(req,res) => {
   if (!(shortURL in urlDatabase)) {
     res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>Can't find URL, please go back</h2><a href='/urls' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Click Here</a></div>");
   }
-  let templateVars = { 
-    shortURL: req.params.id, 
+  let templateVars = {
+    shortURL: req.params.id,
     longURL: urlDatabase[req.params.id].longURL,
-    user: users[req.session.user_id]
+    user: users[req.session.user_id],
+    date: urlDatabase[req.params.id].date
   };
-  // const links = urlsForUser(req.session.user_id);
   if (req.session.user_id && shortURL in urlDatabase) {
     res.render('urls_show', templateVars);
   } else if (!req.session.user_id) {
     res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>Must be signed in.. </h2><a href='/login' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Login Here</a></div>");
-    // res.render('urls_index_blank',templateVars); 
   }
-  
+
 });
 
 app.post('/urls/:id/update',(req,res) => {
-  const usrID = req.session.user_id
+  const usrID = req.session.user_id;
   if (usrID === urlDatabase[req.params.id].userID) {
     urlDatabase[req.params.id].longURL = req.body.longURL;
     res.redirect('/urls');
