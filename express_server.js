@@ -50,17 +50,6 @@ function generateRandomString() {
   }
 };
 
-// function emailLookup(email, database) {
-//   let result = [];
-//   for (const user in database) {
-//     result.push(database[user].email);
-//   }
-//   if (result.includes(email)) {
-//     return result;
-//   } else {
-//     return false;
-//   }
-// };
 
 function urlsForUser(id) {
   let result = {};
@@ -96,8 +85,12 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get('/register', (req, res) => {
+  if (req.session.user_id) {
+    res.redirect('/urls');
+  } else {
   const templateVars = { user: users[req.session.user_id] }
   res.render('register', templateVars);
+  }
 });
 
 app.post('/register',(req,res) => {
@@ -126,7 +119,7 @@ app.post('/urls/:shortURL/delete',(req,res) => {
   const usrID = req.session['user_id']
   if (usrID === urlDatabase[req.params.shortURL].userID) {
     delete urlDatabase[req.params.shortURL];
-    res.redirect(302,'/urls');
+    res.redirect('/urls');
   } else {
     res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>You don't have permission.... Return to your own urls</h2><a href='/urls' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Click Here</a></div>");
   }
@@ -148,8 +141,12 @@ app.post('/login', (req,res) => {
 });
 
 app.get('/login',(req,res) => {
-  const templateVars = { user: users[req.session.user_id] }
-  res.render('login',templateVars);
+  if (req.session.user_id) {
+    res.redirect('/urls');
+  } else {
+    const templateVars = { user: users[req.session.user_id] }
+    res.render('login',templateVars);
+  }
 });
 
 app.post('/logout',(req,res) => {
@@ -172,35 +169,44 @@ app.get('/urls',(req,res) => {
   
 });
 
-app.get('/urls/:shortURL',(req,res) => {
+app.get('/urls/:id',(req,res) => {
+  const shortURL = req.params.id;
+  if (!(shortURL in urlDatabase)) {
+    res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>Can't find URL, please go back</h2><a href='/urls' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Click Here</a></div>");
+  }
   let templateVars = { 
-    shortURL: req.params.shortURL, 
-    longURL: urlDatabase[req.params.shortURL].longURL,
+    shortURL: req.params.id, 
+    longURL: urlDatabase[req.params.id].longURL,
     user: users[req.session.user_id]
   };
   // const links = urlsForUser(req.session.user_id);
-  if (req.session.user_id) {
+  if (req.session.user_id && shortURL in urlDatabase) {
     res.render('urls_show', templateVars);
-  } else {
-    res.render('urls_index_blank',templateVars);
+  } else if (!req.session.user_id) {
+    res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>Must be signed in.. </h2><a href='/login' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Login Here</a></div>");
+    // res.render('urls_index_blank',templateVars); 
   }
   
 });
 
-app.post('/urls/:shortURL/update',(req,res) => {
+app.post('/urls/:id/update',(req,res) => {
   const usrID = req.session.user_id
-  if (usrID === urlDatabase[req.params.shortURL].userID) {
-    urlDatabase[req.params.shortURL].longURL = req.body.longURL;
-    res.redirect('back');
+  if (usrID === urlDatabase[req.params.id].userID) {
+    urlDatabase[req.params.id].longURL = req.body.longURL;
+    res.redirect('/urls');
   } else {
     res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>You don't have permission.... Return to your own urls</h2><a href='/urls' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Click Here</a></div>");
   }
 
 });
 
-app.get('/u/:shortURL',(req,res) => {
-  // let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
-  res.redirect(urlDatabase[req.params.shortURL].longURL);
+app.get('/u/:id',(req,res) => {
+  const shortURL = req.params.id;
+  if (!(shortURL in urlDatabase)) {
+    res.status(400).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>Can't find URL, please go back</h2><a href='/urls' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Click Here</a></div>");
+  } else {
+    res.redirect(urlDatabase[req.params.id].longURL);
+  }
 });
 
 
