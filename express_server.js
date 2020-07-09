@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const PORT = 3000;
 const cookieParser = require('cookie-parser')
+const bcrypt = require('bcrypt');
 
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({extended: true}));
@@ -16,17 +17,17 @@ const users = {
   "userRandomID": {
     id: "userRandomID", 
     email: "user@example.com", 
-    password: "123"
+    password: bcrypt.hashSync('123', 10)
   },
  "user2RandomID": {
     id: "user2RandomID", 
     email: "user2@example.com", 
-    password: "456"
+    password: bcrypt.hashSync('456', 10)
   },
   "user3RandomID": {
      id: "user3RandomID", 
      email: "user3@mail.com", 
-     password: "456"
+     password: bcrypt.hashSync('456', 10)
    }
 };
 
@@ -90,13 +91,13 @@ app.post('/register',(req,res) => {
   let userID = generateRandomString();
   const email = req.body.email;
   const pass = req.body.password;
-  const templateVars = { Error: 'Invalid Username or Password' };
+  const hashedPassword = bcrypt.hashSync(pass, 10);
   if (emailLookup(email)) {
     res.status(400).send('Username already exists! <a href="/login">Login Instead</a>');
   } else if (!email || !pass) {
     res.status(400).send('Invalid Username or Password <a href="/register">Try Again</a>');
   } else {
-    users[userID] = { id: userID, email: email, password: pass };
+    users[userID] = { id: userID, email: email, password: hashedPassword };
     res.cookie('user_id', userID);
     res.redirect('/urls');
   }
@@ -125,9 +126,9 @@ app.post('/login', (req,res) => {
   for (const user in users) {
     if (!emailLookup(userEmail)) {
       res.status(403).send("Hmm.. That username can't be found, <a href='/login'>Try again</a>");
-    } else if (users[user].email === userEmail && users[user].password !== userPass) {
+    } else if (users[user].email === userEmail && !bcrypt.compareSync(userPass, users[user].password)) {
       res.status(403).send("Hmm.. That password doesn't match our records, <a href='/login'>Try again</a>");
-    } else if (users[user].email === userEmail && users[user].password === userPass) {
+    } else if (users[user].email === userEmail && bcrypt.compareSync(userPass, users[user].password)) {
       res.cookie('user_id', users[user].id);
       res.redirect('/urls');
     } 
