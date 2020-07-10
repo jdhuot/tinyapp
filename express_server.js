@@ -103,7 +103,6 @@ app.post('/urls/:id/delete',(req,res) => {
 app.post('/login', (req,res) => {
   const userEmail = req.body.user_email;
   const userPass = req.body.user_pass;
-  console.log(getUserByEmail(userEmail, users));
   for (const user in users) {
     if (!getUserByEmail(userEmail, users)) {
       res.status(403).send("<div style='text-align:center; display:flex; justify-content:center; align-items:center; flex-direction:column; padding:3em 12em;'><h2>Hmm.. that username didn't work..</h2><a href='/login' style='font-size:1em; display:inline; background:navy; color:#ffffff; width:8em; text-decoration:none; font-family:sans-serif; text-transform:uppercase; padding:10px 20px; text-align:center; border-radius:8px;'>Try Again</a></div>");
