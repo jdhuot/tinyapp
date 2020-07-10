@@ -13,7 +13,7 @@
       <div class="card-body">
         <h5 class="card-title">TinyURL for: <%= longURL %></h5>
         <p class="card-text">Short URL: <a href="/u/<%= shortURL %>"><%= shortURL %></a></p>
-        <p class="card-text">Date Created: <a href="/u/<%= shortURL %>"><%= date %></a></p>
+        <p class="card-text">Date Created: <strong><%= date %></strong></p>
         <section>
           <h3>Update Long URL:</h3>
           <form method="post" action="/urls/<%= shortURL %>/update">
